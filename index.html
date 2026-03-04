@@ -1,131 +1,171 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Config Generator</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Config Generator</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <script src="app.js">
-    <div class="container">
-      <h1>Config Generator</h1>
-      <!-- Device Section -->
-      <div class="grid-2">
-        <div class="field">
-          <label>Device Type</label>
-          <select id="deviceType">
-            <option>AR5710-S (Router)</option>
-            <option>S5335-L10T4XA-V2 (Switch)</option>
-            <option>Cisco ISR4331 (Router)</option>
-          </select>
-        </div>
-    
-        <div class="field">
-          <label>CID</label>
-          <input id="CID" placeholder="เช่น C5324">
-        </div>
-    
-        <div class="field">
-          <label>RT Name / Service Name</label>
-          <input id="RT_NAME" placeholder="เช่น China Mobile Getop">
-        </div>
-    
-        <div class="field">
-          <label>VLAN</label>
-          <input id="VLAN" placeholder="เช่น 523">
-        </div>
-    
-        <div class="field">
-          <label>Loopback</label>
-          <input id="LOOPBACK" placeholder="เช่น 10.20.24.236">
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="dot"></div>
+        <div>
+          <div class="title">Config Generator</div>
+          <div class="subtitle">Generate router/switch configs for provisioning</div>
         </div>
       </div>
-    
-      <h2>WAN MANAGEMENT</h2>
-    
-      <div class="grid-2">
-        <div class="field">
-          <label>Node MAIN (Node + Port)</label>
-          <input id="NODE_MAIN_PORT" placeholder="เช่น GE0/3/6">
-        </div>
-    
-        <div class="field">
-          <label>Node PROTEC (Node + Port)</label>
-          <input id="NODE_PROTEC_PORT" placeholder="เช่น GE0/3/8">
-        </div>
-    
-        <div class="field">
-          <label>WAN MGMT NODE MAIN</label>
-          <input id="WAN_MGMT_NODE_MAIN_IP" placeholder="เช่น 10.100.120.10/31">
-        </div>
-    
-        <div class="field">
-          <label>WAN MGMT NODE PROTEC</label>
-          <input id="WAN_MGMT_NODE_PROTEC_IP" placeholder="เช่น 10.100.103.104/31">
-        </div>
-    
-        <div class="field">
-          <label>WAN MGMT RT MAIN</label>
-          <input id="WAN_MGMT_RT_MAIN_IP" placeholder="เช่น 10.100.120.11/31">
-        </div>
-    
-        <div class="field">
-          <label>WAN MGMT RT PROTEC</label>
-          <input id="WAN_MGMT_RT_PROTEC_IP" placeholder="เช่น 10.100.103.105/31">
-        </div>
-      </div>
-    
-      <h2>WAN / LAN</h2>
-    
-      <div class="grid-2">
-        <div class="field">
-          <label>WAN Network</label>
-          <input id="WAN_NETWORK" placeholder="เช่น 172.19.55.32/29">
-        </div>
-    
-        <div class="field">
-          <label>LAN Network</label>
-          <input id="LAN_NETWORK" placeholder="เช่น 203.156.1.168/30">
-        </div>
-    
-        <div class="field">
-          <label>Community main</label>
-          <input id="COMMUNITY_MAIN" placeholder="เช่น 14">
-        </div>
-    
-        <div class="field">
-          <label>Community backup</label>
-          <input id="COMMUNITY_BACKUP" placeholder="เช่น 97">
-        </div>
-      </div>
-    
-      <h2>อื่น ๆ</h2>
-    
-      <div class="grid-2">
-        <div class="field">
-          <label>Customer full name</label>
-          <input id="CUSTOMER_FULLNAME" placeholder="เช่น CMI_TH_New_Getop(Thailand)">
-        </div>
-    
-        <div class="field">
-          <label>PROXY</label>
-          <select id="PROXY">
-            <option>None</option>
-            <option>Proxy-A</option>
-            <option>Proxy-B</option>
-          </select>
-        </div>
-      </div>
-    
+
       <div class="actions">
-        <button id="copyBtn" class="btn-secondary">คัดลอก Config</button>
-        <button id="genBtn" class="btn-primary">สร้าง Config</button>
+        <button id="btnGenerate" class="btn primary">Generate</button>
+        <button id="btnCopy" class="btn">Copy</button>
+        <button id="btnDownload" class="btn">Download .txt</button>
+        <button id="btnClear" class="btn ghost">Clear</button>
       </div>
-    
-      <textarea id="output" placeholder="ผลลัพธ์ config จะขึ้นตรงนี้"></textarea>
-    
-    </div>
-  </script>
+    </header>
+
+    <main class="layout">
+      <!-- LEFT: FORM -->
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Inputs</div>
+          <div id="status" class="status"></div>
+        </div>
+
+        <div class="form">
+          <div class="grid2">
+            <div class="field">
+              <label>Device Type</label>
+              <select id="deviceType">
+                <option value="AR5710">AR5710-S (Router)</option>
+                <option value="S5335">S5335-L10T4X-A-V2 (Switch)</option>
+                <option value="ISR4331">Cisco ISR4331 (Router)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>CID</label>
+              <input id="cid" placeholder="เช่น C5324" />
+            </div>
+
+            <div class="field span2">
+              <label>RT Name / Service Name</label>
+              <input id="rtName" placeholder="เช่น China Mobile Getop" />
+            </div>
+
+            <div class="field">
+              <label>VLAN</label>
+              <input id="vlan" placeholder="เช่น 523" inputmode="numeric" />
+            </div>
+
+            <div class="field">
+              <label>Loopback / Loopback Switch</label>
+              <input id="loopback" placeholder="เช่น 10.20.24.236" />
+            </div>
+          </div>
+
+          <div class="divider">
+            <span class="pill"><span class="pill-dot"></span> WAN MANAGEMENT</span>
+          </div>
+
+          <div class="grid2">
+            <div class="field">
+              <label>Node MAIN (Node + Port)</label>
+              <input id="nodeMain" placeholder="เช่น CX600_BPO GE0/3/6" />
+            </div>
+            <div class="field">
+              <label>Node PROTEC (Node + Port)</label>
+              <input id="nodeProtec" placeholder="เช่น CX600_BMM GE0/3/8" />
+            </div>
+
+            <div class="field">
+              <label>WAN MGMT NODE MAIN</label>
+              <input id="wanNodeMain" placeholder="เช่น 10.100.120.10/31" />
+            </div>
+            <div class="field">
+              <label>WAN MGMT NODE PROTEC</label>
+              <input id="wanNodeProtec" placeholder="เช่น 10.100.103.104/31" />
+            </div>
+
+            <div class="field">
+              <label>WAN MGMT RT MAIN</label>
+              <input id="wanRtMain" placeholder="เช่น 10.100.120.11/31" />
+            </div>
+            <div class="field">
+              <label>WAN MGMT RT PROTEC</label>
+              <input id="wanRtProtec" placeholder="เช่น 10.100.103.105/31" />
+            </div>
+          </div>
+
+          <div class="divider">
+            <span class="pill"><span class="pill-dot"></span> WAN / LAN</span>
+          </div>
+
+          <div class="grid2">
+            <div class="field">
+              <label>WAN Network</label>
+              <input id="wanNetwork" placeholder="เช่น 172.19.55.32/29" />
+            </div>
+            <div class="field">
+              <label>LAN Network</label>
+              <input id="lanNetwork" placeholder="เช่น 203.156.1.168/30" />
+            </div>
+
+            <div class="field">
+              <label>Community main</label>
+              <input id="commMain" placeholder="เช่น 14" inputmode="numeric" />
+            </div>
+            <div class="field">
+              <label>Community backup</label>
+              <input id="commBackup" placeholder="เช่น 97" inputmode="numeric" />
+            </div>
+          </div>
+
+          <div class="divider">
+            <span class="pill"><span class="pill-dot"></span> อื่น ๆ</span>
+          </div>
+
+          <div class="grid2">
+            <div class="field span2">
+              <label>Customer full name</label>
+              <input id="customer" placeholder="เช่น CMI TH_New_Getop(Thailand)" />
+            </div>
+
+            <div class="field">
+              <label>PROXY</label>
+              <select id="proxy">
+                <option value="None">None</option>
+                <option value="Proxy-A">Proxy-A</option>
+                <option value="Proxy-B">Proxy-B</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Remark (optional)</label>
+              <input id="remark" placeholder="ใส่โน้ตเพิ่มได้" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: OUTPUT -->
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Output</div>
+          <div class="hint">Generate แล้วคัดลอก/ดาวน์โหลดได้</div>
+        </div>
+
+        <textarea id="output" class="output" spellcheck="false"
+          placeholder="Config จะขึ้นตรงนี้..."></textarea>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <small>Static site (HTML/CSS/JS) • Deploy on GitHub Pages</small>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
