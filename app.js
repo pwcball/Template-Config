@@ -1,184 +1,249 @@
-// app.js - Static Config Generator (GitHub Pages friendly)
+const $ = (id) => document.getElementById(id);
 
-// ----- Templates (ปรับคำสั่งจริงตามมาตรฐานทีมคุณได้) -----
-const TEMPLATES = {
-  "AR5710-S (Router)": `
-# ===== Huawei AR5710-S =====
-# CID: {{CID}}
-# Service: {{RT_NAME}}
-# Customer: {{CUSTOMER_FULLNAME}}
-# Proxy: {{PROXY}}
-
-sysname {{RT_NAME}}
-#
-# Loopback
-interface LoopBack0
- ip address {{LOOPBACK}} 255.255.255.255
-#
-# ===== WAN MANAGEMENT =====
-# Node MAIN port: {{NODE_MAIN_PORT}}
-# Node PROTEC port: {{NODE_PROTEC_PORT}}
-
-# WAN MGMT NODE MAIN: {{WAN_MGMT_NODE_MAIN_IP}}
-# WAN MGMT NODE PROTEC: {{WAN_MGMT_NODE_PROTEC_IP}}
-# WAN MGMT RT MAIN: {{WAN_MGMT_RT_MAIN_IP}}
-# WAN MGMT RT PROTEC: {{WAN_MGMT_RT_PROTEC_IP}}
-
-# ===== WAN / LAN =====
-# WAN Network: {{WAN_NETWORK}}
-# LAN Network: {{LAN_NETWORK}}
-
-# ===== VLAN =====
-vlan {{VLAN}}
- description {{CID}}
-#
-# ===== COMMUNITY =====
-# main={{COMMUNITY_MAIN}} backup={{COMMUNITY_BACKUP}}
-#
-return
-`.trim(),
-
-  "S5335-L10T4XA-V2 (Switch)": `
-# ===== Huawei S5335-L10T4XA-V2 =====
-# CID: {{CID}}
-# Service: {{RT_NAME}}
-# Customer: {{CUSTOMER_FULLNAME}}
-
-sysname {{RT_NAME}}
-#
-# VLAN
-vlan {{VLAN}}
- description {{CID}}
-#
-# (ตัวอย่าง) ตั้งค่า SNMP community
-snmp-agent
-snmp-agent community read cipher {{COMMUNITY_MAIN}}
-snmp-agent community read cipher {{COMMUNITY_BACKUP}}
-#
-# (ตัวอย่าง) พอร์ต uplink/downlink ให้ไปปรับเองตามแบบฟอร์มถ้ามี
-# interface GigabitEthernet0/0/1
-#  port link-type trunk
-#  port trunk allow-pass vlan {{VLAN}}
-#
-return
-`.trim(),
-
-  "Cisco ISR4331 (Router)": `
-! ===== Cisco ISR4331 =====
-! CID: {{CID}}
-! Service: {{RT_NAME}}
-! Customer: {{CUSTOMER_FULLNAME}}
-! Proxy: {{PROXY}}
-
-hostname {{RT_NAME}}
-!
-interface Loopback0
- ip address {{LOOPBACK}} 255.255.255.255
-!
-! ===== WAN / LAN =====
-! WAN Network: {{WAN_NETWORK}}
-! LAN Network: {{LAN_NETWORK}}
-!
-! ===== VLAN (ตัวอย่าง subif) =====
-interface GigabitEthernet0/0/0.{{VLAN}}
- encapsulation dot1Q {{VLAN}}
- description {{CID}}
-!
-! ===== SNMP COMMUNITY (ตัวอย่าง) =====
-snmp-server community {{COMMUNITY_MAIN}} RO
-snmp-server community {{COMMUNITY_BACKUP}} RO
-!
-end
-`.trim()
-};
-
-// ----- Helpers -----
-function $(id) {
-  return document.getElementById(id);
+function setStatus(msg) {
+  $("status").textContent = msg || "";
 }
 
-function getValue(id) {
-  const el = $(id);
-  if (!el) return "";
-  return String(el.value ?? "").trim();
+function getFormData() {
+  return {
+    deviceType: $("deviceType").value,
+    cid: $("cid").value.trim(),
+    rtName: $("rtName").value.trim(),
+    vlan: $("vlan").value.trim(),
+    loopback: $("loopback").value.trim(),
+    nodeMain: $("nodeMain").value.trim(),
+    nodeProtec: $("nodeProtec").value.trim(),
+    wanNodeMain: $("wanNodeMain").value.trim(),
+    wanNodeProtec: $("wanNodeProtec").value.trim(),
+    wanRtMain: $("wanRtMain").value.trim(),
+    wanRtProtec: $("wanRtProtec").value.trim(),
+    wanNetwork: $("wanNetwork").value.trim(),
+    lanNetwork: $("lanNetwork").value.trim(),
+    commMain: $("commMain").value.trim(),
+    commBackup: $("commBackup").value.trim(),
+    customer: $("customer").value.trim(),
+    proxy: $("proxy").value,
+    remark: $("remark").value.trim(),
+  };
 }
 
-function renderTemplate(tpl, data) {
-  return tpl.replace(/{{\s*([A-Z0-9_]+)\s*}}/g, (_, key) => data[key] ?? "");
+/* ---------- Utilities ---------- */
+function nowStamp() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function validateBasic(data) {
-  // ทำ validation เบา ๆ กันกดแล้วว่างทั้งหมด
-  const required = ["RT_NAME", "CID"];
-  const missing = required.filter(k => !data[k]);
-  if (missing.length) {
-    throw new Error(`กรอกข้อมูลไม่ครบ: ${missing.join(", ")}`);
-  }
-}
-
-function collectFormData() {
-  // ids ตามที่มีใน index.html เวอร์ชันของคุณ
-  const ids = [
-    "CID","RT_NAME","VLAN","LOOPBACK",
-    "NODE_MAIN_PORT","NODE_PROTEC_PORT",
-    "WAN_MGMT_NODE_MAIN_IP","WAN_MGMT_NODE_PROTEC_IP",
-    "WAN_MGMT_RT_MAIN_IP","WAN_MGMT_RT_PROTEC_IP",
-    "WAN_NETWORK","LAN_NETWORK",
-    "COMMUNITY_MAIN","COMMUNITY_BACKUP",
-    "CUSTOMER_FULLNAME","PROXY"
+function validateBasic(d) {
+  const required = [
+    ["cid", "CID"],
+    ["rtName", "RT Name / Service Name"],
+    ["vlan", "VLAN"],
+    ["loopback", "Loopback"],
   ];
 
-  const data = {};
-  for (const id of ids) data[id] = getValue(id);
+  const missing = required.filter(([k]) => !d[k]);
+  if (missing.length) {
+    return `กรอกให้ครบ: ${missing.map(x => x[1]).join(", ")}`;
+  }
 
-  // ตั้งค่า default เผื่อผู้ใช้ไม่กรอก
-  if (!data.VLAN) data.VLAN = "0";
-  if (!data.LOOPBACK) data.LOOPBACK = "0.0.0.0";
-  if (!data.PROXY) data.PROXY = "None";
+  if (d.vlan && !/^\d+$/.test(d.vlan)) return "VLAN ต้องเป็นตัวเลข";
+  if (d.commMain && !/^\d+$/.test(d.commMain)) return "Community main ต้องเป็นตัวเลข";
+  if (d.commBackup && !/^\d+$/.test(d.commBackup)) return "Community backup ต้องเป็นตัวเลข";
 
-  return data;
+  return "";
 }
 
-// ----- Main actions -----
+/* ---------- Templates ---------- */
+/**
+ * หมายเหตุ: ตอนนี้เป็น “โครง/ตัวอย่าง” ให้คุณใช้งานได้เลย
+ * ถ้าคุณส่งตัวอย่าง config จริงของแต่ละรุ่นมา 1 ชุด ผมจะปรับ template ให้เป๊ะตามมาตรฐานทีมคุณ
+ */
+
+function tpl_AR5710(d) {
+  return `# =========================
+# CUSTOMER / SERVICE
+# =========================
+# Generated: ${nowStamp()}
+# Customer : ${d.customer || "-"}
+# CID      : ${d.cid}
+# Service  : ${d.rtName}
+# Proxy    : ${d.proxy}
+# Remark   : ${d.remark || "-"}
+
+system-view
+sysname ${d.rtName || "AR5710-SVC"}
+
+# ---- MGMT / LOOPBACK ----
+interface LoopBack0
+ ip address ${d.loopback} 255.255.255.255
+
+# ---- VLAN ----
+vlan ${d.vlan}
+
+# ---- WAN MGMT (MAIN/PROTEC) ----
+# MAIN: ${d.nodeMain || "-"}
+#  Node IP: ${d.wanNodeMain || "-"}
+#  RT IP  : ${d.wanRtMain || "-"}
+# PROT: ${d.nodeProtec || "-"}
+#  Node IP: ${d.wanNodeProtec || "-"}
+#  RT IP  : ${d.wanRtProtec || "-"}
+
+# ---- WAN/LAN Networks ----
+# WAN: ${d.wanNetwork || "-"}
+# LAN: ${d.lanNetwork || "-"}
+
+# ---- SNMP Communities (if used) ----
+# main  : ${d.commMain || "-"}
+# backup: ${d.commBackup || "-"}
+
+save
+y
+`;
+}
+
+function tpl_S5335(d) {
+  return `# =========================
+# SWITCH PROVISIONING
+# =========================
+# Generated: ${nowStamp()}
+# Customer : ${d.customer || "-"}
+# CID      : ${d.cid}
+# Service  : ${d.rtName}
+# Proxy    : ${d.proxy}
+# Remark   : ${d.remark || "-"}
+
+system-view
+sysname ${d.rtName || "S5335-SVC"}
+
+vlan ${d.vlan}
+ name VLAN_${d.vlan}
+
+# Loopback (if L3 enabled on switch)
+interface LoopBack0
+ ip address ${d.loopback} 255.255.255.255
+
+# WAN/LAN hint
+# WAN: ${d.wanNetwork || "-"}
+# LAN: ${d.lanNetwork || "-"}
+
+save
+y
+`;
+}
+
+function tpl_ISR4331(d) {
+  return `! =========================
+! CISCO ISR4331 PROVISIONING
+! =========================
+! Generated: ${nowStamp()}
+! Customer : ${d.customer || "-"}
+! CID      : ${d.cid}
+! Service  : ${d.rtName}
+! Proxy    : ${d.proxy}
+! Remark   : ${d.remark || "-"}
+
+hostname ${sanitizeCiscoHostname(d.rtName || "ISR4331-SVC")}
+
+! Loopback
+interface Loopback0
+ ip address ${d.loopback} 255.255.255.255
+ no shut
+
+! VLAN (example - adapt interface naming)
+vlan ${d.vlan}
+ name VLAN_${d.vlan}
+
+! WAN/LAN hint
+! WAN: ${d.wanNetwork || "-"}
+! LAN: ${d.lanNetwork || "-"}
+
+end
+write memory
+`;
+}
+
+function sanitizeCiscoHostname(name) {
+  // Cisco hostname: avoid spaces/specials
+  return name.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9\-]/g, "").slice(0, 63) || "ISR4331";
+}
+
+const TEMPLATE_MAP = {
+  AR5710: tpl_AR5710,
+  S5335: tpl_S5335,
+  ISR4331: tpl_ISR4331,
+};
+
 function generateConfig() {
-  const deviceType = getValue("deviceType");
-  const template = TEMPLATES[deviceType];
-
-  if (!template) throw new Error("ไม่พบ template ของอุปกรณ์นี้");
-
-  const data = collectFormData();
-  validateBasic(data);
-
-  const output = renderTemplate(template, data);
-  $("output").value = output;
-}
-
-async function copyConfig() {
-  const text = getValue("output");
-  if (!text) {
-    alert("ยังไม่มี config ให้คัดลอก (กด 'สร้าง Config' ก่อน)");
+  const d = getFormData();
+  const err = validateBasic(d);
+  if (err) {
+    setStatus(`⚠️ ${err}`);
     return;
   }
-  await navigator.clipboard.writeText(text);
-  alert("คัดลอก Config แล้ว");
+
+  const fn = TEMPLATE_MAP[d.deviceType] || tpl_AR5710;
+  const out = fn(d);
+
+  $("output").value = out;
+  setStatus(`Generated ✅ (${d.deviceType})`);
 }
 
-// ----- Init -----
-function init() {
-  const genBtn = $("genBtn");
-  const copyBtn = $("copyBtn");
+/* ---------- Actions ---------- */
+async function copyOutput() {
+  const text = $("output").value;
+  if (!text) return setStatus("⚠️ ยังไม่มี output");
 
-  if (genBtn) genBtn.addEventListener("click", () => {
-    try { generateConfig(); }
-    catch (e) { alert(e.message); }
-  });
-
-  if (copyBtn) copyBtn.addEventListener("click", () => {
-    copyConfig().catch(err => alert(err.message));
-  });
-
-  // สร้าง config ครั้งแรกอัตโนมัติ (ถ้าอยากให้ไม่ทำ ให้คอมเมนต์บรรทัดนี้)
-  // try { generateConfig(); } catch (_) {}
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus("Copied ✅");
+  } catch {
+    $("output").select();
+    document.execCommand("copy");
+    setStatus("Copied (fallback) ✅");
+  }
 }
 
-document.addEventListener("DOMContentLoaded", init);
+function downloadTxt() {
+  const text = $("output").value;
+  if (!text) return setStatus("⚠️ ยังไม่มี output");
+
+  const d = getFormData();
+  const filenameSafe = (d.cid || "config").replace(/[^a-zA-Z0-9_\-]/g, "_");
+  const fname = `${filenameSafe}_${d.deviceType}.txt`;
+
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fname;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  URL.revokeObjectURL(url);
+  setStatus(`Downloaded ✅ (${fname})`);
+}
+
+function clearAll() {
+  const ids = [
+    "cid","rtName","vlan","loopback","nodeMain","nodeProtec",
+    "wanNodeMain","wanNodeProtec","wanRtMain","wanRtProtec",
+    "wanNetwork","lanNetwork","commMain","commBackup","customer","remark",
+    "output"
+  ];
+  ids.forEach(id => $(id).value = "");
+  $("proxy").value = "None";
+  setStatus("");
+}
+
+/* ---------- Wire up ---------- */
+$("btnGenerate").addEventListener("click", generateConfig);
+$("btnCopy").addEventListener("click", copyOutput);
+$("btnDownload").addEventListener("click", downloadTxt);
+$("btnClear").addEventListener("click", clearAll);
+
+$("deviceType").addEventListener("change", () => {
+  setStatus(`Selected: ${$("deviceType").value}`);
+});
