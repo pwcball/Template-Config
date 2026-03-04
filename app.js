@@ -1,13 +1,3 @@
-/* ============================================================
-   Config Generator - app.js (Full)
-   - Target: GitHub Pages (Static HTML/CSS/JS)
-   - Device: AR5710-S (Huawei VRP) + Node preconfig (CX600)
-   - WAN /29 mapping:
-       network+1 (.33) = Node MAIN
-       network+2 (.34) = Node PROTEC
-       network+3 (.35) = RT
-   ============================================================ */
-
 const $ = (id) => document.getElementById(id);
 
 /* -------------------- UI helpers -------------------- */
